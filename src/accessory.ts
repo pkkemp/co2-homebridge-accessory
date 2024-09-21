@@ -10,6 +10,7 @@ import {
   Logging,
   Service
 } from "homebridge";
+import * as http from "node:http";
 
 /*
  * IMPORTANT NOTICE
@@ -40,33 +41,59 @@ let hap: HAP;
  */
 export = (api: API) => {
   hap = api.hap;
-  api.registerAccessory("ExampleSwitch", ExampleSwitch);
+  api.registerAccessory("CO2Monitor", CO2Monitor);
 };
 
-class ExampleSwitch implements AccessoryPlugin {
+class CO2Monitor implements AccessoryPlugin {
 
   private readonly log: Logging;
   private readonly name: string;
-  private switchOn = false;
+  private co2detected = false;
+  private co2level = 0;
+  private url: string;
 
-  private readonly switchService: Service;
+  private readonly sensorService: Service;
   private readonly informationService: Service;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
+    this.url = "https://weather-data.kemp.me/dc/co2/"
     this.name = config.name;
 
-    this.switchService = new hap.Service.Switch(this.name);
-    this.switchService.getCharacteristic(hap.Characteristic.On)
+    this.sensorService = new hap.Service.CarbonDioxideSensor(this.name);
+    this.sensorService.getCharacteristic(hap.Characteristic.CarbonDioxideLevel)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-        log.info("Current state of the switch was returned: " + (this.switchOn? "ON": "OFF"));
-        callback(undefined, this.switchOn);
+        http.get(this.url, (response) => {
+          let body = '';
+
+          response.on('data', (chunk) => {
+            body += chunk;
+          });
+
+          response.on('end', () => {
+            try {
+              const data = JSON.parse(body);
+              const co2Level = data.co2 || 0; // Assuming JSON payload has 'co2' key
+              this.log(`CO2 level: ${co2Level}`);
+              this.co2level = data.co2level;
+              callback();
+            } catch (error) {
+              this.log('Error parsing JSON:', error);
+              callback();
+            }
+          });
+        }).on('error', (error) => {
+          this.log('HTTP GET failed:', error);
+          callback(error);
+        });
+        // log.info("Current state of the switch was returned: " + (this.switchOn? "ON": "OFF"));
+        // callback(undefined, this.switchOn);
       })
-      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.switchOn = value as boolean;
-        log.info("Switch state was set to: " + (this.switchOn? "ON": "OFF"));
-        callback();
-      });
+      // .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+      //   this.switchOn = value as boolean;
+      //   log.info("Switch state was set to: " + (this.switchOn? "ON": "OFF"));
+      //   callback();
+      // });
 
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, "Custom Manufacturer")
@@ -74,6 +101,31 @@ class ExampleSwitch implements AccessoryPlugin {
 
     log.info("Switch finished initializing!");
   }
+
+  // getCO2Level(callback) {
+  //   http.get(this.url, (response) => {
+  //     let body = '';
+  //
+  //     response.on('data', (chunk) => {
+  //       body += chunk;
+  //     });
+  //
+  //     response.on('end', () => {
+  //       try {
+  //         const data = JSON.parse(body);
+  //         const co2Level = data.co2 || 0; // Assuming JSON payload has 'co2' key
+  //         this.log(`CO2 level: ${co2Level}`);
+  //         callback(null, co2Level);
+  //       } catch (error) {
+  //         this.log('Error parsing JSON:', error);
+  //         callback(error);
+  //       }
+  //     });
+  //   }).on('error', (error) => {
+  //     this.log('HTTP GET failed:', error);
+  //     callback(error);
+  //   });
+  // }
 
   /*
    * This method is optional to implement. It is called when HomeKit ask to identify the accessory.
@@ -90,7 +142,7 @@ class ExampleSwitch implements AccessoryPlugin {
   getServices(): Service[] {
     return [
       this.informationService,
-      this.switchService,
+      this.sensorService,
     ];
   }
 

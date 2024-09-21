@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-accessory-example",
+  "name": "homebridge-co2-plugin",
   "version": "1.0.0",
   "description": "An example accessory plugin for homebridge written in Typescript",
   "main": "dist/accessory.js",
@@ -24,10 +24,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/homebridge/homebridge-examples.git"
+    "url": "git://github.com/pkkemp/co2-homebridge-accessory.git"
   },
   "bugs": {
-    "url": "https://github.com/homebridge/homebridge-examples/issues"
+    "url": "https://github.com/pkkemp/co2-homebridge-accessory/issues"
   },
   "devDependencies": {
     "@types/node": "16.11.7",
