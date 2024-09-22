@@ -44,6 +44,8 @@ export = (api: API) => {
   api.registerAccessory("CO2Monitor", CO2Monitor);
 };
 
+
+
 class CO2Monitor implements AccessoryPlugin {
 
   private readonly log: Logging;
@@ -61,6 +63,9 @@ class CO2Monitor implements AccessoryPlugin {
     this.name = config.name;
 
     this.sensorService = new hap.Service.CarbonDioxideSensor(this.name);
+    // create handlers for required characteristics
+    this.sensorService.getCharacteristic(hap.Characteristic.CarbonDioxideDetected)
+        .onGet(this.handleCarbonDioxideDetectedGet.bind(this));
     this.sensorService.getCharacteristic(hap.Characteristic.CarbonDioxideLevel)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         http.get(this.url, (response) => {
@@ -100,6 +105,18 @@ class CO2Monitor implements AccessoryPlugin {
       .setCharacteristic(hap.Characteristic.Model, "Custom Model");
 
     log.info("Switch finished initializing!");
+  }
+
+  /**
+   * Handle requests to get the current value of the "Carbon Dioxide Detected" characteristic
+   */
+  handleCarbonDioxideDetectedGet() {
+    this.log.debug('Triggered GET CarbonDioxideDetected');
+
+    // set this to a valid value for CarbonDioxideDetected
+    // const currentValue = this.Characteristic.CarbonDioxideDetected.CO2_LEVELS_NORMAL;
+    const currentValue = false
+    return currentValue;
   }
 
   // getCO2Level(callback) {
